@@ -12,7 +12,7 @@ app.use(cors());
 
 // Database Connection With MongoDB
 
-mongoose.connect("mongodb+srv://ollyelliott99:Hemingway_99!@cluster0.avg7kzm.mongodb.net/e-commerce");
+mongoose.connect("mongodb+srv://ollyelliott99:<password>@cluster0.avg7kzm.mongodb.net/e-commerce");
 
 // API Creation
 
@@ -175,7 +175,7 @@ app.post('/signup', async (req, res) => {
 
     const token = jwt.sign(data, 'secret_ecom');
     res.json({success: true, token});
-});
+})
 
 // Create endpoint for user login
 
@@ -186,7 +186,7 @@ app.post('/login', async (req, res) => {
         if (passCompare) {
             const data = {
                 user: {
-                    id: user.id,
+                    id: user.id
                 }
             }
             const token = jwt.sign(data, 'secret_ecom');
@@ -197,7 +197,67 @@ app.post('/login', async (req, res) => {
     } else {
         res.json({success:false, errors:"Wrong Email ID"});
     }
-});
+})
+
+// Endpoint for New Collection data
+app.get('/newcollections', async (req, res) => {
+    let products = await Product.find({});
+    let newcollection = products.slice(1).slice(-8);
+    console.log("New Collection Fetched");
+    res.send(newcollection);
+})
+
+// Endpoint for Popular data
+app.get('/popular', async (req, res) => {
+    let products = await Product.find({category:"women"});
+    let popular = products.slice(0,4);
+    console.log("Popular Products Fetched");
+    res.send(popular);
+})
+
+// Middleware to fetch user
+const fetchUser = async (req, res, next) => {
+    const token = req.header('auth-token');
+    if(!token) {
+        res.status(401).send({errors:"Please authenticate using valid token"});
+    }
+    else {
+        try{
+         const data = jwt.verify(token, 'secret_ecom');
+         req.user = data.user;
+         next();
+        }
+        catch (error) {
+            res.status(401).send({errors:"Please authenticate using a valid token"})
+        }
+    }
+}
+
+// Endpoint for Cart Data
+app.post('/addtocart', fetchUser, async (req, res)=> {
+    console.log("Added", req.body.itemId);
+    let userData = await Users.findOne({_id:req.user.id});
+    userData.cartData[req.body.itemId] += 1;
+    await Users.findOneAndUpdate({_id:req.user.id}, {cartData:userData.cartData});
+    res.send("Added to Cart");
+})
+
+// Endpoint to remove product from Cart
+app.post('/removefromcart', fetchUser, async (req, res)=> {
+    console.log("Removed", req.body.itemId);
+    let userData = await Users.findOne({_id:req.user.id});
+    if (userData.cartData[req.body.itemId]>0)
+    userData.cartData[req.body.itemId] -= 1;
+    await Users.findOneAndUpdate({_id:req.user.id}, {cartData:userData.cartData});
+    res.send("Removed from Cart");
+})
+
+// Enpoint to get Cart data 
+app.post('/getcart', fetchUser, async (req, res)=> {
+    console.log("Get Cart");
+    let userData = await Users.findOne({_id:req.user.id});
+    res.json(userData.cartData);
+})
 
 app.listen(port,(error)=>{
     if(!error) {
