@@ -186,12 +186,12 @@ app.post('/login', async (req, res) => {
         if (passCompare) {
             const data = {
                 user: {
-                    id: user.id
+                    id: user.id,
                 }
             }
             const token = jwt.sign(data, 'secret_ecom');
             res.json({sucess: true, token});
-        } else{
+        } else {
             res.json({success: false, errors:"Wrong Password"});
         }
     } else {
